@@ -1,5 +1,6 @@
 package searchengine.services;
 
+import com.sun.xml.bind.v2.TODO;
 import lombok.Getter;
 
 import lombok.Setter;
@@ -65,7 +66,6 @@ public class IndexingService {
         }
     }
 
-
     public void startIndexingAll(){
         List<Site> sitesList = sites.getSites();
         List<Thread> threads = new ArrayList<>();
@@ -111,7 +111,7 @@ public class IndexingService {
 
         htmlParser = new HtmlParser();
         WebSite webSite = new WebSite();
-        webSite.setUrl(url.replace("www.", ""));// проверить передаваемые адреса сделать единообразно
+        webSite.setUrl(url); //TODO проверить передаваемые адреса сделать единообразно
         webSite.setName(url.replace("https://", ""));
         webSite.setStatus(Status.INDEXING);
         webSite.setStatusTime(LocalDateTime.now());
@@ -120,7 +120,7 @@ public class IndexingService {
 
         try {
             WebSite correctNameSite = siteRepository.findById(webSite.getId()).get();
-            correctNameSite.setName(htmlParser.getTitle(url));
+            correctNameSite.setName(htmlParser.getTitle(url.replace("www.", "")));
             siteRepository.save(correctNameSite);
 
             Page mainPage = new Page();

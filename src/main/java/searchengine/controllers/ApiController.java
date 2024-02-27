@@ -55,9 +55,9 @@ public class ApiController {
     @PostMapping("/indexPage")
     public ResponseEntity<IndexingResponse> indexingPage(@RequestParam String url){
         indexingService.startIndexingOne(url);
-        return ResponseEntity.ok(new IndexingResponse(true, null));// исправить Response
+        return ResponseEntity.ok(new IndexingResponse(true, null));//TODO исправить Response согласно тз
 
-        // создать Response в случае ошибки
+        //TODO создать Response в случае ошибки согласно тз
     }
 
     @GetMapping("/search")
@@ -66,7 +66,7 @@ public class ApiController {
                                                        @RequestParam(required = false) Integer offset,
                                                        @RequestParam(required = false) Integer limit){
 
-        //написать метод
+        //TODO написать метод согласно тз
 
         return ResponseEntity.ok(new IndexingResponse(true, null));
     }

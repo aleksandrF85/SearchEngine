@@ -40,69 +40,6 @@ public class Demo {
         System.out.println(path);
 
 
-//        @SneakyThrows
-//        public void startIndexingOne(String s){
-//            URL url;
-//            try {
-//                url = new URL(s);
-//            } catch (MalformedURLException e) {
-//                throw new RuntimeException(e);
-//            }
-//            String home = url.getProtocol() + "://" + url.getHost();
-//            String path = url.getFile();
-//            if (path == null){
-//                indexingWorker(home);
-//            } else {
-//                for (Page p : pageRepository.findAll()) {
-//                    if (p.getPath().equals(path)) {
-//                        pageRepository.delete(p);
-//                        indexingOnePage(path, p.getWebSite());
-//                    }
-//                    else {
-//                        throw new FailedIndexingException("This page is off-site specified in the configuration file");
-//                    }
-//                }
-//            }
-//        }
-//
-//
-//        public void startIndexingAll(){
-//            List<Site> sitesList = sites.getSites();
-//            List<Thread> threads = new ArrayList<>();
-//
-//            for(int i = 0; i < sitesList.size(); i++) {
-//                Site site = sitesList.get(i);
-//                URL url;
-//                try {
-//                    url = new URL(site.getUrl());
-//                } catch (MalformedURLException e) {
-//                    throw new RuntimeException(e);
-//                }
-//                String home = url.getProtocol() + "://" + url.getHost();
-//
-//                threads.add(new Thread(() -> {
-//                    indexingWorker(home);
-//                }));
-//            }
-//            threads.forEach(Thread::start);
-//            for (Thread thread : threads) {
-//                try {
-//                    thread.join();
-//                } catch (InterruptedException e) {
-//                    throw new RuntimeException(e);
-//                }
-//            }
-//        }
-//        public void indexingOnePage(String url, WebSite webSite){
-//            Page page = new Page();
-//            page.setWebSite(webSite);
-//            page.setPath(url);
-//            page.setContent(htmlParser.getContent(url));
-//            page.setCode(htmlParser.getCode(url));
-//
-//            pageRepository.save(page);
-//            saveLemmas(page);
-//        }
 
 
     }
