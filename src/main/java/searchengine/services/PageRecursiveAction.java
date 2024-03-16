@@ -42,7 +42,7 @@ public class PageRecursiveAction extends RecursiveAction {
         for (String link : links) {
             if (!linksPool.contains(link) && link.startsWith(webSite.getUrl())) {
                 if (stopIndexing){
-                    throw new FailedIndexingException("Indexing stopped");
+                    throw new FailedIndexingException("индексация остановлена");
                 }
                 linksPool.add(link);
                 Page child = new Page();

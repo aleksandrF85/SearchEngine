@@ -29,7 +29,7 @@ public class StatisticsServiceImpl implements StatisticsService {
 
         TotalStatistics total = new TotalStatistics();
         List<WebSite> sitesList = new ArrayList<>();
-        siteRepository.findAll().forEach(webSite -> sitesList.add(webSite));
+        siteRepository.findAll().forEach(site -> sitesList.add(site));
         total.setSites(sitesList.size());
         total.setIndexing(!indexingService.isIndexingInProgress());
 

@@ -9,7 +9,7 @@ import java.util.List;
 @Setter
 @Entity
 @Table(name="lemma")
-public class Lemma {
+public class Lemma implements Comparable<Lemma>{
 
 
     /**
@@ -37,4 +37,8 @@ public class Lemma {
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, mappedBy="lemma")
     private List<Index> indexList;
 
+    @Override
+    public int compareTo(Lemma o) {
+        return this.frequency.compareTo(o.frequency);
+    }
 }

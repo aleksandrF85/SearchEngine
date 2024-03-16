@@ -54,10 +54,13 @@ public class ApiController {
 
     @PostMapping("/indexPage")
     public ResponseEntity<IndexingResponse> indexingPage(@RequestParam String url){
-        indexingService.startIndexingOne(url);
-        return ResponseEntity.ok(new IndexingResponse(true, null));//TODO исправить Response согласно тз
+        try {
+            indexingService.startIndexingOne(url);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new IndexingResponse(false, e.getMessage()));
+        }
 
-        //TODO создать Response в случае ошибки согласно тз
+        return ResponseEntity.ok(new IndexingResponse(true, null));
     }
 
     @GetMapping("/search")
