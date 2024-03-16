@@ -37,7 +37,7 @@ public class SearchService {
         }
         Collections.sort(lemmaList);
 
-        List<SearchPage> searchPageList = getSearchPageList(lemmaList, getPageList(lemmaList));
+        List<SearchPage> searchPageList = getSearchPageList(lemmaList, getPagesWithLemmas(lemmaList));
         Collections.sort(searchPageList);
 
         for (SearchPage page :
@@ -46,7 +46,7 @@ public class SearchService {
         }
 
     }
-    public List<Page> getPageList(List<Lemma> lemmaList){
+    public List<Page> getPagesWithLemmas(List<Lemma> lemmaList){
         ArrayList<Page> pagesList = new ArrayList<>();
         ArrayList<Page> shortList = new ArrayList<>();
         for (int i = 0; i < lemmaList.size(); i++){

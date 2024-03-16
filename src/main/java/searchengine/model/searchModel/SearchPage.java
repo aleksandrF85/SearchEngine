@@ -15,7 +15,6 @@ public class SearchPage implements Comparable<SearchPage>{
 
     double relevance;
 
-
     @Override
     public int compareTo(SearchPage p) {
         return (int) (p.getRelevance() * 10 - this.relevance * 10);
