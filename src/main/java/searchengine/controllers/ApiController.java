@@ -3,75 +3,81 @@ package searchengine.controllers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import searchengine.config.SitesList;
-import searchengine.dto.indexation.IndexingResponse;
-import searchengine.dto.statistics.StatisticsResponse;
+import searchengine.dto.responses.ErrorResponse;
+import searchengine.dto.responses.Response;
+import searchengine.dto.search.SearchResponse;
 import searchengine.services.IndexingService;
 import searchengine.services.PageRecursiveAction;
+import searchengine.services.SearchService;
 import searchengine.services.StatisticsService;
 
 @RestController
 @RequestMapping("/api")
 public class ApiController {
 
-    @Autowired
-    SitesList sitesList;
     private final StatisticsService statisticsService;
     @Autowired
     IndexingService indexingService;
+    @Autowired
+    SearchService searchService;
 
     public ApiController(StatisticsService statisticsService) {
         this.statisticsService = statisticsService;
     }
 
     @GetMapping("/statistics")
-    public ResponseEntity<StatisticsResponse> statistics() {
+    public ResponseEntity<Object> statistics() {
         return ResponseEntity.ok(statisticsService.getStatistics());
     }
 
     @GetMapping("/startIndexing")
-    public ResponseEntity<IndexingResponse> startIndexing(){
+    public ResponseEntity<Object> startIndexing(){
         if (indexingService.isIndexingInProgress()){
 
-            return ResponseEntity.badRequest().body(new IndexingResponse(false, "Индексация уже запущена"));
+            return ResponseEntity.badRequest().body(new ErrorResponse(false, "Индексация уже запущена"));
         }
         PageRecursiveAction.setStopIndexing(false);
-        indexingService.startIndexingAll();
+        new Thread(() -> indexingService.startIndexingAll()).start();
 
-        return ResponseEntity.ok(new IndexingResponse(true, null));
+        return ResponseEntity.ok(new Response(true));
     }
 
     @GetMapping("/stopIndexing")
-    public ResponseEntity<IndexingResponse> stopIndexing(){
+    public ResponseEntity<Object> stopIndexing(){
         if (!indexingService.isIndexingInProgress()){
 
-            return ResponseEntity.badRequest().body(new IndexingResponse(false, "Индексация не запущена"));
+            return ResponseEntity.badRequest().body(new ErrorResponse(false, "Индексация не запущена"));
         }
         PageRecursiveAction.setStopIndexing(true);
 
-        return ResponseEntity.ok(new IndexingResponse(true, null));
+        return ResponseEntity.ok(new Response(true));
     }
 
     @PostMapping("/indexPage")
-    public ResponseEntity<IndexingResponse> indexingPage(@RequestParam String url){
+    public ResponseEntity<Object> indexingPage(@RequestParam String url){
         try {
+            PageRecursiveAction.setStopIndexing(false);
             indexingService.startIndexingOne(url);
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(new IndexingResponse(false, e.getMessage()));
+            return ResponseEntity.badRequest().body(new ErrorResponse(false, e.getMessage()));
         }
 
-        return ResponseEntity.ok(new IndexingResponse(true, null));
+        return ResponseEntity.ok(new Response(true));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<IndexingResponse> searchText(@RequestParam(required = false) String query,
-                                                       @RequestParam(required = false) String site,
-                                                       @RequestParam(required = false) Integer offset,
-                                                       @RequestParam(required = false) Integer limit){
+    public ResponseEntity<Object> searchText(@RequestParam(defaultValue = "") String query,
+                                                     @RequestParam(defaultValue = "") String site,
+                                                     @RequestParam(defaultValue = "0") Integer offset,
+                                                     @RequestParam(defaultValue = "20") Integer limit){
 
-        //TODO написать метод согласно тз
+        SearchResponse response;
+        try {
+            response = searchService.startSearch(query, site, offset, limit);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(new ErrorResponse(false, e.getMessage()));
+        }
 
-        return ResponseEntity.ok(new IndexingResponse(true, null));
+        return ResponseEntity.ok(response);
     }
-
 }

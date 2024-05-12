@@ -41,8 +41,7 @@ public class IndexingService {
         List<Site> sitesList = sites.getSites();
         List<Thread> threads = new ArrayList<>();
 
-        for(int i = 0; i < sitesList.size(); i++) {
-            Site site = sitesList.get(i);
+        for (Site site : sitesList) {
             URL url;
             try {
                 url = new URL(site.getUrl());
@@ -65,7 +64,6 @@ public class IndexingService {
 
     @SneakyThrows
     public void startIndexingOne(String s){
-        boolean match = false;
         URL url;
         try {
             url = new URL(s);
@@ -74,19 +72,13 @@ public class IndexingService {
         }
         String home = url.getProtocol() + "://" + url.getHost().replace("www.", "");
         String path = url.getFile();
-        if (path.isEmpty()){
-            match = true;
+        Page page = pageRepository.findByPath(path).orElse(null);
+        if (path.isEmpty()) {
             indexingWorker(home);
+        } else if (page != null) {
+            pageRepository.delete(page);
+            indexingOnePage(page);
         } else {
-            for (Page page : pageRepository.findAll()) {
-                if (page.getPath().equals(path)) {
-                    match = true;
-                    pageRepository.delete(page);
-                    indexingOnePage(page);
-                }
-            }
-        }
-        if (!match){
             throw new FailedIndexingException("Данная страница находится за пределами сайтов, указанных в конфигурационном файле");
         }
     }
@@ -101,16 +93,13 @@ public class IndexingService {
         pageRepository.save(newPage);
 
         ConcurrentSkipListSet<Page> pages = new ConcurrentSkipListSet<>();
-        for (Page p: pageRepository.findAll()) {
-            if (p.getWebSite().equals(page.getWebSite())){
-                pages.add(p);
-            }
-        }
+        pages.addAll(pageRepository.findByWebSite(page.getWebSite()));
         saveLemmas(pages);
     }
     public void indexingWorker(String url){
         htmlParser = new HtmlParser();
 
+        deleteIfIndexed(url);
         WebSite site = saveSite(url);
 
         try {
@@ -143,7 +132,6 @@ public class IndexingService {
     public WebSite saveSite (String url){
         htmlParser = new HtmlParser();
 
-        deleteIfIndexed(url);
         WebSite site = new WebSite();
         site.setUrl(url);
         site.setStatus(Status.INDEXING);
@@ -161,17 +149,16 @@ public class IndexingService {
         return site;
     }
     public void deleteIfIndexed(String url){
-        for (WebSite site :
-                siteRepository.findAll()) {
-            if(site.getUrl().equals(url)){
-                siteRepository.delete(site);
-            }
+
+        WebSite site = siteRepository.findByUrl(url).orElse(null);
+        if(site != null){
+            siteRepository.delete(site);
         }
     }
 
     public boolean isIndexingInProgress(){
-        for (WebSite site :
-                siteRepository.findAll()) {
+
+        for (WebSite site : siteRepository.findAll()) {
             if (site.getStatus().equals(Status.INDEXING)) {
                 return true;
             }
@@ -182,8 +169,7 @@ public class IndexingService {
     public void saveLemmas(ConcurrentSkipListSet<Page> pages){
         Map<String, Lemma> lemmaMap = new TreeMap<>();
         List<Index> indexList = new ArrayList<>();
-        for (Page page :
-                pages) {
+        for (Page page : pages) {
             String text = page.getContent();
 
             Map<String, Integer> lemmas;

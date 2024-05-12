@@ -11,12 +11,13 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 
 @Getter
 public class HtmlParser {
     private ConcurrentSkipListSet<String> links;
-
 
     private boolean isLink(String link) {
 
@@ -85,14 +86,18 @@ public class HtmlParser {
         return code;
     }
 
-    public String getText(String url){
+    public List<String> getText(String url) {
+        List<String> lines = new ArrayList<>();
         Document doc;
         try {
             doc = Jsoup.connect(url).ignoreHttpErrors(true).followRedirects(false).get();
+            Elements elements = doc.select("section");
+            for (Element e : elements) {
+                lines.add(e.text());
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        return doc.text();
+        return lines;
     }
-
 }

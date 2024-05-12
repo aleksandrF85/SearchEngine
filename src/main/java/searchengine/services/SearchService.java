@@ -1,16 +1,29 @@
 package searchengine.services;
 
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.hibernate.query.criteria.internal.expression.function.AggregationFunction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import searchengine.model.*;
+import searchengine.dto.search.SearchData;
+import searchengine.dto.search.SearchResponse;
+import searchengine.exeption.FailedIndexingException;
+import searchengine.exeption.FailedSearchException;
+import searchengine.model.Index;
+import searchengine.model.Lemma;
+import searchengine.model.Page;
+import searchengine.model.WebSite;
 import searchengine.model.searchModel.SearchLemma;
 import searchengine.model.searchModel.SearchPage;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.SiteRepository;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.*;
 
+@Slf4j
 @Service
 public class SearchService {
 
@@ -20,32 +33,110 @@ public class SearchService {
     @Autowired
     SiteRepository siteRepository;
 
-    public void findLemmas (String query, WebSite site){
+    HtmlParser htmlParser;
 
-        Map<String, Integer> lemmas;
+    @SneakyThrows
+    public SearchResponse startSearch(String query, String site, Integer offset, Integer limit){
+        if (query.isEmpty()){
+            throw new FailedSearchException("Задан пустой поисковый запрос!");
+        }
+        SearchResponse response = new SearchResponse();
+        if(site.isEmpty()){
+            List<SearchData> searchData = new ArrayList<>();
+            for (WebSite s : siteRepository.findAll()) {
+                searchData.addAll(searchWorker(query, s));
+            }
+                if (searchData.isEmpty()){
+                    throw new FailedSearchException("Совпадений не найдено!");
+                }
+            response.setData(setSearchData(searchData, offset, limit));
+            response.setCount(searchData.size());
+            response.setResult(true);
+            return response;
+        }
+
+        URL url;
         try {
-            lemmas = LemmaFinder.getInstance().collectLemmas(query);
+            url = new URL(site);
+        } catch (MalformedURLException e) {
+            throw new FailedIndexingException("Некорректный адрес страницы!");
+        }
+        String home = url.getProtocol() + "://" + url.getHost().replace("www.", "");
+        WebSite webSite = siteRepository.findByUrl(home).orElse(null);
+        if (webSite != null) {
+            List<SearchData> searchData = searchWorker(query, webSite);
+            response.setData(setSearchData(searchData, offset, limit));
+            response.setCount(searchData.size());
+            response.setResult(true);
+            return response;
+        } else {
+            throw new FailedSearchException("Указанная страница не найдена");
+        }
+    }
+
+    public List<SearchData> setSearchData(List<SearchData> searchData, int offset, int limit){
+        if (limit == 0){
+            limit = 20;
+        }
+        if (searchData.size() >= offset + limit) {
+            List<SearchData> searchDataLimited = new ArrayList<>();
+            for (int i = 0; i <= searchData.size(); i++){
+                if (i == offset && i < (offset + limit)){
+                    searchDataLimited.add(searchData.get(i));
+                }
+            }
+            return searchDataLimited;
+        } else if (searchData.size() - limit >= 0){
+            int start = searchData.size() - limit;
+            List<SearchData> searchDataLimited = new ArrayList<>();
+            for (int i = 0; i <= searchData.size(); i++){
+                if (i == start && i < (start + limit)){
+                    searchDataLimited.add(searchData.get(i));
+                }
+            }
+            return searchDataLimited;
+        }
+        return searchData;
+    }
+    public List<SearchData> searchWorker(String query, WebSite site){
+        htmlParser = new HtmlParser();
+
+        List<Lemma> lemmaList = findLemmas(query, site);
+        List<SearchPage> searchPageList = getSearchPageList(lemmaList, getPagesWithLemmas(lemmaList));
+        List<SearchData> searchDataList = new ArrayList<>();
+
+        for (SearchPage page : searchPageList) {
+            SearchData searchData = new SearchData();
+            searchData.setUri(page.getPage().getPath());
+            searchData.setSite(page.getPage().getWebSite().getUrl());
+            searchData.setSiteName(page.getPage().getWebSite().getName());
+            String path = searchData.getSite() + searchData.getUri();
+            searchData.setTitle(htmlParser.getTitle(path));
+            searchData.setRelevance(page.getRelevance());
+            searchData.setSnippet(findPageSnippet(page, lemmaList));
+            searchDataList.add(searchData);
+        }
+        return searchDataList;
+    }
+
+    public List<Lemma> findLemmas (String query, WebSite site){
+        Set<String> lemmas = new HashSet<>();
+        try {
+            lemmas.addAll(LemmaFinder.getInstance().getLemmaSet(query));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
         ArrayList<Lemma> lemmaList = new ArrayList<>();
         for (Lemma lemma : lemmaRepository.findAll()) {
-            if (lemmas.containsKey(lemma.getLemma()) && lemma.getFrequency() < 100 && lemma.getWebSite().equals(site)){
+            if (lemmas.contains(lemma.getLemma()) && lemma.getFrequency() < 100 && lemma.getWebSite().equals(site)){
                     lemmaList.add(lemma);
             }
         }
         Collections.sort(lemmaList);
-
-        List<SearchPage> searchPageList = getSearchPageList(lemmaList, getPagesWithLemmas(lemmaList));
-        Collections.sort(searchPageList);
-
-        for (SearchPage page :
-                searchPageList) {
-            //TODO создание объекта SearchData
-        }
-
+        return lemmaList;
     }
+
     public List<Page> getPagesWithLemmas(List<Lemma> lemmaList){
         ArrayList<Page> pagesList = new ArrayList<>();
         ArrayList<Page> shortList = new ArrayList<>();
@@ -58,41 +149,43 @@ public class SearchService {
                 }
             }
             if (!shortList.isEmpty()){
-                pagesList = shortList;
+                pagesList.clear();
+                pagesList.addAll(shortList);
+                shortList.clear();
             }
         }
-        return shortList;
+        return pagesList;
     }
 
     public List<SearchPage> getSearchPageList(List<Lemma> lemmaList, List<Page> shortList){
         List<SearchPage> searchPageList = new ArrayList<>();
-        if (shortList.size() != 0){
-            for (Page p : shortList) {
-                SearchPage page = new SearchPage();
-                List<SearchLemma> searchLemmaList = new ArrayList<>();
-                page.setPage(p);
-                searchPageList.add(page);
-                for (Lemma l : lemmaList){
-                    SearchLemma lemma = new SearchLemma();
-                    lemma.setLemma(l);
-                    for (Index i : p.getIndexList()) {
-                        if(i.getLemma().equals(l)){
-                            lemma.setRank(i.getRank());
-                        }
-                    }
-                    searchLemmaList.add(lemma);
-                }
-                page.setLemmaRankList(searchLemmaList);
-
-                setRelevance(page, searchPageList, searchLemmaList);
-            }
+        if (shortList.isEmpty()){
+            return searchPageList;
         }
+        for (Page p : shortList) {
+            SearchPage page = new SearchPage();
+            List<SearchLemma> searchLemmaList = new ArrayList<>();
+            page.setPage(p);
+            for (Lemma l : lemmaList){
+                SearchLemma lemma = new SearchLemma();
+                lemma.setLemma(l);
+                for (Index i : p.getIndexList()) {
+                    if(i.getLemma().equals(l)){
+                        lemma.setRank(i.getRank());
+                    }
+                }
+                searchLemmaList.add(lemma);
+            }
+            page.setLemmaRankList(searchLemmaList);
+            setRelevance(page, searchPageList, searchLemmaList);
+            searchPageList.add(page);
+        }
+        Collections.sort(searchPageList);
         return searchPageList;
     }
     public void setRelevance(SearchPage page, List<SearchPage> searchPageList, List<SearchLemma> searchLemmaList){
         double relevanceAbs = 0;
-        for (SearchLemma searchLemma :
-                searchLemmaList) {
+        for (SearchLemma searchLemma : searchLemmaList) {
             relevanceAbs += searchLemma.getRank();
         }
         page.setRelevanceAbs(relevanceAbs);
@@ -109,4 +202,44 @@ public class SearchService {
         }
     }
 
+    public String findPageSnippet(SearchPage page, List<Lemma> queryLemmas) {
+        htmlParser = new HtmlParser();
+
+        List<String> lines = htmlParser.getText(page.getPage().getWebSite().getUrl() + page.getPage().getPath());
+        int count = 0;
+        Map<String, Integer> snippetMap = new HashMap<>();
+        for (String str : lines) {
+            String lowerCase = str.toLowerCase();
+            for (Lemma l : queryLemmas) {
+                if(str.contains(l.getLemma())){
+                    try {
+                        int beginIndex = lowerCase.indexOf(l.getLemma());
+                        int endIndex = Math.min(str.indexOf(" ", beginIndex), (str.length() -1));
+
+                        String snippet = str.substring(beginIndex, endIndex).trim();
+                        int beginSnippet = beginIndex > 100 ? str.indexOf(" ", beginIndex - 100) : 0;
+                        int endSnippet = beginIndex + 100 > (str.length() -1) ? (str.length() - 1) : str.indexOf(" ", beginIndex + 100);
+                        str = str.substring(beginSnippet, endSnippet).replaceAll(snippet, "<b>" + snippet + "</b>");
+
+                        lowerCase = str.toLowerCase();
+                        count = count + 1;
+                    } catch (Exception e){
+                        log.info(e.toString());
+                    }
+                }
+            }
+            snippetMap.put(str, count);
+            count = 0;
+        }
+        int maxValue = 0;
+        String out = "Совпадений не найдено";
+        for (Map.Entry<String, Integer> entry : snippetMap.entrySet()) {
+            int i = entry.getValue();
+            if (i > maxValue){
+                maxValue = i;
+                out = entry.getKey();
+            }
+        }
+        return out;
+    }
 }

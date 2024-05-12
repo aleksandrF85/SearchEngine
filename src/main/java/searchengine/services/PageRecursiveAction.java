@@ -3,6 +3,7 @@ package searchengine.services;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import searchengine.exeption.FailedIndexingException;
 import searchengine.model.Page;
 import searchengine.model.WebSite;
@@ -13,7 +14,7 @@ import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.RecursiveAction;
 
-
+@Slf4j
 public class PageRecursiveAction extends RecursiveAction {
 
     private Page page;
@@ -51,7 +52,7 @@ public class PageRecursiveAction extends RecursiveAction {
                 child.setContent(parser.getContent(link));
                 child.setCode(parser.getCode(link));
                 children.add(child);
-                System.out.println(child);
+                log.info(child.toString());
             }
         }
         List<PageRecursiveAction> taskList = new ArrayList<>();
