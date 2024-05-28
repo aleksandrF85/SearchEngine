@@ -2,7 +2,6 @@ package searchengine.services;
 
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.query.criteria.internal.expression.function.AggregationFunction;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import searchengine.dto.search.SearchData;
@@ -202,34 +201,30 @@ public class SearchService {
         }
     }
 
+    @SneakyThrows
     public String findPageSnippet(SearchPage page, List<Lemma> queryLemmas) {
         htmlParser = new HtmlParser();
+        List<String> lines = htmlParser.getText(page.getPage().getContent());
 
-        List<String> lines = htmlParser.getText(page.getPage().getWebSite().getUrl() + page.getPage().getPath());
-        int count = 0;
         Map<String, Integer> snippetMap = new HashMap<>();
-        for (String str : lines) {
-            String lowerCase = str.toLowerCase();
-            for (Lemma l : queryLemmas) {
-                if(str.contains(l.getLemma())){
-                    try {
-                        int beginIndex = lowerCase.indexOf(l.getLemma());
-                        int endIndex = Math.min(str.indexOf(" ", beginIndex), (str.length() -1));
+        HashSet<String> words = LemmaFinder.getInstance().getMatches(page.getPage().getContent(), queryLemmas);
 
-                        String snippet = str.substring(beginIndex, endIndex).trim();
-                        int beginSnippet = beginIndex > 100 ? str.indexOf(" ", beginIndex - 100) : 0;
-                        int endSnippet = beginIndex + 100 > (str.length() -1) ? (str.length() - 1) : str.indexOf(" ", beginIndex + 100);
-                        str = str.substring(beginSnippet, endSnippet).replaceAll(snippet, "<b>" + snippet + "</b>");
-
-                        lowerCase = str.toLowerCase();
-                        count = count + 1;
-                    } catch (Exception e){
-                        log.info(e.toString());
-                    }
+        for (String line : lines) {
+            int count = 0;
+            for (String word : words) {
+                if (line.toLowerCase().contains(word)) {
+                    int start = line.toLowerCase().indexOf(word);
+                    int beginSnippet = start > 150 ? line.toLowerCase().indexOf(" ", start - 150) : 0;
+                    int endSnippet = Math.min(start + 150, (line.length() - 1));
+                    String boldWord = line.substring(start, start + word.length());
+                    line = line.substring(beginSnippet, endSnippet).replaceAll(boldWord, "<b>" + boldWord + "</b>");
+                    count = count + 1;
                 }
             }
-            snippetMap.put(str, count);
-            count = 0;
+
+            if (count > 0){
+                snippetMap.put(line, count);
+            }
         }
         int maxValue = 0;
         String out = "Совпадений не найдено";

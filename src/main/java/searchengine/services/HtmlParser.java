@@ -86,18 +86,16 @@ public class HtmlParser {
         return code;
     }
 
-    public List<String> getText(String url) {
+    public List<String> getText(String content) {
+
         List<String> lines = new ArrayList<>();
-        Document doc;
-        try {
-            doc = Jsoup.connect(url).ignoreHttpErrors(true).followRedirects(false).get();
-            Elements elements = doc.select("section");
-            for (Element e : elements) {
-                lines.add(e.text());
-            }
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        Document doc = Jsoup.parse(content);
+
+        Elements elements = doc.select("a[href]");
+        for (Element e : elements) {
+            lines.add(e.text());
         }
+
         return lines;
     }
 }

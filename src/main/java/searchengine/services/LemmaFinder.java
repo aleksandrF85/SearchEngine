@@ -3,6 +3,7 @@ package searchengine.services;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.morphology.LuceneMorphology;
 import org.apache.lucene.morphology.russian.RussianLuceneMorphology;
+import searchengine.model.Lemma;
 
 import java.io.IOException;
 import java.util.*;
@@ -112,4 +113,33 @@ public class LemmaFinder {
         }
         return true;
     }
+
+    public HashSet<String> getMatches(String text, List<Lemma> queryLemmas) {
+        String[] words = arrayContainsRussianWords(text);
+        HashSet<String> matches = new HashSet<>();
+
+        for (String word : words) {
+            if (word.isBlank()) {
+                continue;
+            }
+
+            List<String> wordBaseForms = luceneMorphology.getMorphInfo(word);
+            if (anyWordBaseBelongToParticle(wordBaseForms)) {
+                continue;
+            }
+
+            List<String> normalForms = luceneMorphology.getNormalForms(word);
+            if (normalForms.isEmpty()) {
+                continue;
+            }
+
+            String normalWord = normalForms.get(0);
+            for (Lemma str : queryLemmas) {
+                if (str.getLemma().equals(normalWord))
+                    matches.add(word);
+            }
+        }
+        return matches;
+    }
+
 }

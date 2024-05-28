@@ -39,7 +39,15 @@ public class PageRecursiveAction extends RecursiveAction {
 
         linksPool.add(page.getWebSite().getUrl());
         WebSite webSite = page.getWebSite();
-        ConcurrentSkipListSet<String> links = parser.getLinks(webSite.getUrl());
+        ConcurrentSkipListSet<String> links = new ConcurrentSkipListSet<>();
+        try {
+            links = parser.getLinks(webSite.getUrl());
+        } catch (Exception e){
+            log.info(page.getPath());
+            page.setCode(408);
+            log.warn(e.getMessage());
+        }
+
         for (String link : links) {
             if (!linksPool.contains(link) && link.startsWith(webSite.getUrl())) {
                 if (stopIndexing){
@@ -52,7 +60,6 @@ public class PageRecursiveAction extends RecursiveAction {
                 child.setContent(parser.getContent(link));
                 child.setCode(parser.getCode(link));
                 children.add(child);
-                log.info(child.toString());
             }
         }
         List<PageRecursiveAction> taskList = new ArrayList<>();
