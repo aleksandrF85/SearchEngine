@@ -91,7 +91,7 @@ public class HtmlParser {
         List<String> lines = new ArrayList<>();
         Document doc = Jsoup.parse(content);
 
-        Elements elements = doc.select("a[href]");
+        Elements elements = doc.select("section, p, title");
         for (Element e : elements) {
             lines.add(e.text());
         }
