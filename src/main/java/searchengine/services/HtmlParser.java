@@ -90,8 +90,8 @@ public class HtmlParser {
 
         List<String> lines = new ArrayList<>();
         Document doc = Jsoup.parse(content);
-
-        Elements elements = doc.select("section, p, title");
+        lines.add(doc.select("meta[name=description]").attr("content"));
+        Elements elements = doc.select("section, p, a, title, li");
         for (Element e : elements) {
             lines.add(e.text());
         }

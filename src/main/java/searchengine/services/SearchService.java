@@ -74,13 +74,11 @@ public class SearchService {
     }
 
     public List<SearchData> setSearchData(List<SearchData> searchData, int offset, int limit){
-        if (limit == 0){
-            limit = 20;
-        }
+
         if (searchData.size() >= offset + limit) {
             List<SearchData> searchDataLimited = new ArrayList<>();
             for (int i = 0; i <= searchData.size(); i++){
-                if (i == offset && i < (offset + limit)){
+                if (i >= offset && i < (offset + limit)){
                     searchDataLimited.add(searchData.get(i));
                 }
             }
@@ -215,10 +213,12 @@ public class SearchService {
                 if (line.toLowerCase().contains(word)) {
                     int start = line.toLowerCase().indexOf(word);
                     int beginSnippet = start > 150 ? line.toLowerCase().indexOf(" ", start - 150) : 0;
-                    int endSnippet = Math.min(start + 150, (line.length() - 1));
-                    String boldWord = line.substring(start, start + word.length());
-                    line = line.substring(beginSnippet, endSnippet).replaceAll(boldWord, "<b>" + boldWord + "</b>");
-                    count = count + 1;
+                    int endSnippet = Math.min(start + 150, (line.length()));
+                    String boldWord = line.substring(start, Math.max(start + word.length(), line.indexOf(" ", start))).replaceAll("\\p{Punct}", "");
+                    if (!line.contains("<b>" + boldWord)) {
+                        line = line.substring(beginSnippet, endSnippet).replaceAll(boldWord, "<b>" + boldWord + "</b>");
+                        count = count + 1;
+                    }
                 }
             }
 
