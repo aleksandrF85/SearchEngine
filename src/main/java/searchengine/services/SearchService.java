@@ -45,9 +45,9 @@ public class SearchService {
             for (WebSite s : siteRepository.findAll()) {
                 searchData.addAll(searchWorker(query, s));
             }
-                if (searchData.isEmpty()){
-                    throw new FailedSearchException("Совпадений не найдено!");
-                }
+            if (searchData.isEmpty()){
+                throw new FailedSearchException("Совпадений не найдено!");
+            }
             response.setData(setSearchData(searchData, offset, limit));
             response.setCount(searchData.size());
             response.setResult(true);
