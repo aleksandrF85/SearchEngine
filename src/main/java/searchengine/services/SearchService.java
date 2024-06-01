@@ -202,10 +202,15 @@ public class SearchService {
     @SneakyThrows
     public String findPageSnippet(SearchPage page, List<Lemma> queryLemmas) {
         htmlParser = new HtmlParser();
-        List<String> lines = htmlParser.getText(page.getPage().getContent());
-
         Map<String, Integer> snippetMap = new HashMap<>();
         HashSet<String> words = LemmaFinder.getInstance().getMatches(page.getPage().getContent(), queryLemmas);
+        HashSet<String> lines = new HashSet<>();
+        String content = page.getPage().getContent();
+
+        lines.add(htmlParser.getDescription(content));
+        for (String word : words){
+            lines.addAll(htmlParser.getOwnText(content, word));
+        }
 
         for (String line : lines) {
             int count = 0;

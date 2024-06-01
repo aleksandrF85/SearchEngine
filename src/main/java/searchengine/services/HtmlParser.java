@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ConcurrentSkipListSet;
 
@@ -86,16 +87,23 @@ public class HtmlParser {
         return code;
     }
 
-    public List<String> getText(String content) {
+    public String getDescription(String content) {
 
-        List<String> lines = new ArrayList<>();
         Document doc = Jsoup.parse(content);
-        lines.add(doc.select("meta[name=description]").attr("content"));
-        Elements elements = doc.select("section, p, a, title, li");
+
+        return doc.select("meta[name=description]").attr("content");
+    }
+
+    public HashSet<String> getOwnText(String content, String word){
+
+        Document doc = Jsoup.parse(content);
+        Elements elements = doc.getElementsContainingOwnText(word);
+        HashSet<String> lines = new HashSet<>();
         for (Element e : elements) {
             lines.add(e.text());
         }
 
         return lines;
     }
+
 }
