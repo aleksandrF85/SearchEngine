@@ -6,7 +6,7 @@ import searchengine.model.Page;
 import java.util.List;
 
 @Data
-public class SearchPage implements Comparable<SearchPage>{
+public class SearchPage {
     Page page;
 
     List<SearchLemma> lemmaRankList;
@@ -15,8 +15,24 @@ public class SearchPage implements Comparable<SearchPage>{
 
     double relevance;
 
+    public void setLemmaRankList(List<SearchLemma> lemmaRankList) {
+        this.lemmaRankList = lemmaRankList;
+
+        double sum = 0.0;
+        for (SearchLemma l : lemmaRankList) {
+            double rank = l.getRank();
+            sum += rank;
+        }
+        setRelevanceAbs(sum);
+    }
+
     @Override
-    public int compareTo(SearchPage p) {
-        return (int) (p.getRelevance() * 10 - this.relevance * 10);
+    public String toString() {
+        return "SearchPage{" +
+                "page=" + page.getWebSite().getUrl() + page.getPath() +
+                ", lemmaRankList=" + lemmaRankList +
+                ", relevanceAbs=" + relevanceAbs +
+                ", relevance=" + relevance +
+                '}';
     }
 }

@@ -10,4 +10,11 @@ public class SearchLemma {
 
     float rank;
 
+    @Override
+    public String toString() {
+        return "SearchLemma{" +
+                "lemma=" + lemma.getLemma() +
+                ", rank=" + rank +
+                '}';
+    }
 }

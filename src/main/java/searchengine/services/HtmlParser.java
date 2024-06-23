@@ -46,7 +46,7 @@ public class HtmlParser {
         return links;
     }
 
-    public String getTitle(String url){
+    public String getSiteName(String url){
 
         Document doc;
         try {
@@ -54,6 +54,13 @@ public class HtmlParser {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+        return doc.title();
+    }
+
+    public String getTitle(String content){
+
+        Document doc = Jsoup.parse(content);
+
         return doc.title();
     }
 
@@ -83,22 +90,17 @@ public class HtmlParser {
         return code;
     }
 
-    public String getDescription(String content) {
-
-        Document doc = Jsoup.parse(content);
-
-        return doc.select("meta[name=description]").attr("content");
-    }
-
     public HashSet<String> getOwnText(String content, String word){
 
         Document doc = Jsoup.parse(content);
         Elements elements = doc.getElementsContainingOwnText(word);
         HashSet<String> lines = new HashSet<>();
+        lines.add(doc.select("meta[name=description]").attr("content"));
         for (Element e : elements) {
-            lines.add(e.text());
+            if (!e.className().isEmpty()) {
+                lines.add(doc.getElementsByClass(e.className()).text().replace("◄", "").trim());
+            }
         }
-
         return lines;
     }
 

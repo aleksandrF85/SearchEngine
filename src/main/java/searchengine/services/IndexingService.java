@@ -42,12 +42,7 @@ public class IndexingService {
         List<Thread> threads = new ArrayList<>();
 
         for (Site site : sitesList) {
-            URL url;
-            try {
-                url = new URL(site.getUrl());
-            } catch (MalformedURLException e) {
-                throw new RuntimeException(e);
-            }
+            URL url = getUrl(site.getUrl());
             String home = url.getProtocol() + "://" + url.getHost().replace("www.", "");
 
             threads.add(new Thread(() -> indexingWorker(home)));
@@ -64,12 +59,7 @@ public class IndexingService {
 
     @SneakyThrows
     public void startIndexingOne(String s){
-        URL url;
-        try {
-            url = new URL(s);
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
+        URL url = getUrl(s);
         String home = url.getProtocol() + "://" + url.getHost().replace("www.", "");
         String path = url.getFile();
         Page page = pageRepository.findByPath(path).orElse(null);
@@ -95,6 +85,16 @@ public class IndexingService {
         ConcurrentSkipListSet<Page> pages = new ConcurrentSkipListSet<>();
         pages.addAll(pageRepository.findByWebSite(page.getWebSite()));
         saveLemmas(pages);
+    }
+
+    public URL getUrl(String path){
+        URL url;
+        try {
+            url = new URL(path);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+        return url;
     }
     public void indexingWorker(String url){
         htmlParser = new HtmlParser();
@@ -137,7 +137,7 @@ public class IndexingService {
         site.setStatus(Status.INDEXING);
         site.setStatusTime(LocalDateTime.now());
         try {
-            site.setName(htmlParser.getTitle(url));
+            site.setName(htmlParser.getSiteName(url));
         } catch (Exception e) {
             site.setName(url.replace("https://", ""));
             site.setStatus(Status.FAILED);
